@@ -1,3 +1,9 @@
+# Python
 *.pyc
 __pycache__/
+
+# Node
 node_modules/
+
+# Build artifacts
+dist/
