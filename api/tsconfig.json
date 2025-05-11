@@ -1,0 +1,32 @@
+// package.json (root of nexa monorepo)
+{
+  "name": "nexa",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "api",
+    "orchestrator",
+    "tools/nexa-cli",
+    "dashboard"
+  ],
+  "scripts": {
+    "build:contracts": "cd contracts && npx hardhat compile",
+    "deploy:diamond": "cd contracts && npx hardhat run scripts/deploy-diamond.js --network localhost",
+    "build:api": "cd api && npm install && npm run build",
+    "start:api": "cd api && npm start",
+    "build:orchestrator": "cd orchestrator && npm install",
+    "start:orchestrator": "cd orchestrator && node src/orchestrator.js",
+    "build:cli": "cd tools/nexa-cli && npm install",
+    "start:cli": "cd tools/nexa-cli && node index.js",
+    "build:dashboard": "cd dashboard && npm install && npm run build",
+    "start:dashboard": "cd dashboard && npm run start",
+    "lint": "eslint . --ext .ts,.js,.jsx,.tsx",
+    "test:contracts": "cd contracts && forge test",
+    "ci": "npm run lint && npm run build:contracts && npm run test:contracts"
+  },
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "prettier": "^2.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+import { schedule } from "node-cron";
+import { broadcastProposal } from "./p2p.js";
+import { fetchDrand } from "./drand.js";
+import { proposeParams } from "./plugin-loader.js";
+
+const INTERVAL = "*/1 * * * *"; // every minute
+
+function startOrchestrator() {
+  console.log("NEXA Orchestrator starting...");
+
+  schedule(INTERVAL, async () => {
+    try {
+      const entropy = await fetchDrand();
+      const proposal = await proposeParams(entropy);
+      await broadcastProposal(proposal);
+      console.log("Proposal sent:", proposal);
+    } catch (err) {
+      console.error("Orchestrator error:", err.message);
+    }
+  });
+}
+
+startOrchestrator();
