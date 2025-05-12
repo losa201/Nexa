@@ -1,65 +1,66 @@
-import { gql, PubSub } from 'apollo-server-express';
+import { gql } from 'apollo-server-express';
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { PubSub } from 'graphql-subscriptions';
 
+interface Event {
+  type: string;
+  key?: string;
+  oldValue?: number;
+  newValue?: number;
+  to?: string;
+  from?: string;
+  amount?: number;
+  dstChainId?: number;
+  srcChainId?: number;
+  timestamp: number;
+}
+
+// In-memory event store + pub/sub
 const pubsub = new PubSub();
-export const EVENT_ADDED = 'EVENT_ADDED';
+const EVENT_ADDED = 'EVENT_ADDED';
+const eventsStore: Event[] = [];
 
-export const typeDefs = gql`
-  type ThresholdEvent {
+export const typeDefs = gql\`
+  type Event {
     type: String!
-    key: String!
+    key: String
     oldValue: Int
     newValue: Int
+    to: String
+    from: String
+    amount: Int
+    dstChainId: Int
+    srcChainId: Int
     timestamp: Int!
   }
 
   type Query {
-    recentThresholdEvents(limit: Int = 10): [ThresholdEvent!]!
+    recentEvents(limit: Int): [Event!]!
   }
 
   type Subscription {
-    thresholdEvents: ThresholdEvent!
+    eventAdded: Event!
   }
-
-  type Mutation {
-    addThresholdEvent(
-      type: String!
-      key: String!
-      oldValue: Int
-      newValue: Int
-    ): Boolean!
-  }
-`;
-
-let inMemoryEvents: Array<{
-  type: string;
-  key: string;
-  oldValue?: number;
-  newValue?: number;
-  timestamp: number;
-}> = [];
+\`;
 
 export const resolvers = {
   Query: {
-    recentThresholdEvents: () =>
-      inMemoryEvents.slice(-10).reverse(),
-  },
-  Mutation: {
-    addThresholdEvent: (
-      _: any,
-      { type, key, oldValue, newValue }: any
-    ) => {
-      const ev = { type, key, oldValue, newValue, timestamp: Math.floor(Date.now() / 1000) };
-      inMemoryEvents.push(ev);
-      pubsub.publish(EVENT_ADDED, { thresholdEvents: ev });
-      return true;
-    },
+    recentEvents: (_: any, { limit }: { limit?: number }) =>
+      limit ? eventsStore.slice(-limit) : eventsStore,
   },
   Subscription: {
-    thresholdEvents: {
+    eventAdded: {
       subscribe: () => pubsub.asyncIterator([EVENT_ADDED]),
     },
   },
 };
 
-export const schema = makeExecutableSchema({ typeDefs, resolvers });
+export function publishEvent(ev: Event) {
+  eventsStore.push(ev);
+  pubsub.publish(EVENT_ADDED, { eventAdded: ev });
+}
+
+export const schema = makeExecutableSchema({
+  typeDefs,
+  resolvers,
+});

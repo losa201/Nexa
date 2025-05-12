@@ -1,16 +1,10 @@
-import express from 'express';
-export const router = express.Router();
-let anomalyThreshold = Number(process.env.ANOMALY_THRESHOLD) || 1000;
+import * as express from 'express';
+import { Request, Response } from 'express';
 
-router.post('/threshold', (req, res) => {
-  const { threshold } = req.body;
-  if (typeof threshold !== 'number' || threshold < 0) {
-    return res.status(400).send('Invalid threshold');
-  }
-  anomalyThreshold = threshold;
-  res.sendStatus(204);
+const router = express.Router();
+
+router.get('/threshold', (_req: Request, res: Response) => {
+  res.json({ threshold: 42 });
 });
 
-export function getThreshold() {
-  return anomalyThreshold;
-}
+export default router;
