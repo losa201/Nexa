@@ -1,0 +1,20 @@
+{
+  "name": "Nexa Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "forwardPorts": [5173],
+  "postCreateCommand": "cd dashboard && npm install",
+  "portsAttributes": {
+    "5173": {
+      "label": "Nexa Dashboard",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
