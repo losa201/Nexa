@@ -6,17 +6,17 @@
     "build": "tsc"
   },
   "dependencies": {
-    "eventemitter3": "^5.0.0",
-    "axios": "^1.4.0",
-    "libp2p": "^0.41.4",
-    "@chainsafe/libp2p-tcp": "^0.16.8",
+    "@chainsafe/libp2p-tcp": "npm:@libp2p/tcp@^0.16.8",
     "@lume/quantum-rng": "^1.0.0",
-    "frosted-threshold": "^0.1.0",
+    "axios": "^1.4.0",
     "celestia-js": "^0.2.0",
-    "layerzero-evm": "^1.0.0"
+    "eventemitter3": "^5.0.0",
+    "frosted-threshold": "^0.1.0",
+    "layerzero-evm": "^1.0.0",
+    "libp2p": "^0.41.4"
   },
   "devDependencies": {
-    "typescript": "^5.1.6",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6"
   }
 }
