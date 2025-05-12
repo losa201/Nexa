@@ -9,3 +9,5 @@ __pycache__/
 
 # Build artifacts
 .env
+nexa-full.zip
+node_modules/
