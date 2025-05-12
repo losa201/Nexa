@@ -1,23 +1,17 @@
-#!/usr/bin/env node
-const { program } = require('commander');
-
+// Add near the bottom, before program.parse(...)
 program
-  .name('nexa')
-  .description('CLI for interacting with the NEXA blockchain infra')
-  .version('0.1.0');
-
-program
-  .command('propose')
-  .description('Submit a tokenomics proposal')
-  .action(() => {
-    console.log('Submitting proposal (stub)...');
+  .command('set-threshold <amt>')
+  .description('Update the anomaly threshold for mint events')
+  .action(async (amt) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/threshold`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ threshold: Number(amt) }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      console.log(chalk.green(`Threshold updated to ${amt}`));
+    } catch (e) {
+      console.error(chalk.red('Failed to set threshold:'), e.message);
+    }
   });
-
-program
-  .command('health')
-  .description('Check orchestrator health')
-  .action(() => {
-    console.log('Orchestrator is healthy');
-  });
-
-program.parse();

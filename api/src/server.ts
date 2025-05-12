@@ -9,6 +9,7 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 app.use(express.json());
+  app.use('/api', require('./services/threshold').router);
 
 let clients: Response[] = [];
 app.get('/events', (req, res) => {
