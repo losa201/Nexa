@@ -1,20 +1,31 @@
+// orchestrator/src/plugins/tokenomics-oracle.ts
 import EventEmitter from "eventemitter3";
 import { Contract, providers } from "ethers";
-import TokenomicsJSON from "../../TokenomicsOracle.json";
+import fetch from "node-fetch";
+import TokenomicsJSON from "../../contracts/TokenomicsOracle.json";
 
 export default {
   init(emitter: EventEmitter) {
-    const rpc = process.env.RPC_URL!;
-    const provider = new providers.JsonRpcProvider(rpc);
-    const oracleAddr = process.env.ORACLE_ADDRESS!;
-    const contract = new Contract(oracleAddr, TokenomicsJSON.abi, provider);
+    const provider = new providers.JsonRpcProvider(process.env.RPC_URL!);
+    const contract = new Contract(process.env.ORACLE_ADDRESS!, TokenomicsJSON.abi, provider);
+    const apiUrl = process.env.API_EVENTS_URL!;
 
-    contract.on("ParameterUpdated", (key: string, oldVal: any, newVal: any, ts: any) => {
-      const k = Buffer.from(key.slice(2), "hex").toString(); // decode bytes32
-      console.log(\`🛰️  [Oracle] \${k}: \${oldVal.toString()} → \${newVal.toString()} @\${new Date(ts.toNumber() * 1000).toISOString()}\`);
-      emitter.emit("parameterUpdated", { key: k, oldValue: oldVal.toNumber(), newValue: newVal.toNumber(), timestamp: ts.toNumber() });
+    contract.on("ParameterUpdated", async (key, oldVal, newVal, ts) => {
+      const k = Buffer.from((key as string).slice(2), "hex").toString();
+      const event = { type: 'parameterUpdated', key: k, oldValue: oldVal.toNumber(), newValue: newVal.toNumber(), timestamp: ts.toNumber() };
+      console.log(`🛰️ [Oracle] ${k}: ${oldVal} → ${newVal}`);
+      emitter.emit("parameterUpdated", event);
+      try {
+        await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(event)
+        });
+      } catch (e) {
+        console.error("Failed to forward oracle event", e);
+      }
     });
 
-    console.log("✅ TokenomicsOracle plugin initialized and listening for updates");
+    console.log("✅ TokenomicsOracle plugin initialized (forwarding events)");
   }
 };

@@ -1,24 +1,45 @@
 // orchestrator/src/plugins/omni-chain-plugin.ts
 import EventEmitter from "eventemitter3";
 import { Contract, providers } from "ethers";
-import OmniChainJSON from "../../contracts/OmniChainTokenomics.json";
+import fetch from "node-fetch";
+import OmniJSON from "../../contracts/OmniChainTokenomics.json";
 
 export default {
   init(emitter: EventEmitter) {
-    const rpc = process.env.RPC_URL!;
-    const provider = new providers.JsonRpcProvider(rpc);
-    const omniAddr = process.env.OMNI_ADDRESS!;
-    const contract = new Contract(omniAddr, OmniChainJSON.abi, provider);
+    const provider = new providers.JsonRpcProvider(process.env.RPC_URL!);
+    const contract = new Contract(process.env.OMNI_ADDRESS!, OmniJSON.abi, provider);
+    const apiUrl = process.env.API_EVENTS_URL!;
 
-    contract.on("TokensMinted", (to: string, amount: any, dstChainId: number, ts: any) => {
-      console.log(`🌐 [OmniChain] Minted ${amount.toString()} to ${to} on chain ${dstChainId}`);
-      emitter.emit("minted", { to, amount: amount.toNumber(), dstChainId, timestamp: ts.toNumber() });
-    });
-    contract.on("TokensBurned", (from: string, amount: any, srcChainId: number, ts: any) => {
-      console.log(`🔥 [OmniChain] Burned ${amount.toString()} from ${from} on chain ${srcChainId}`);
-      emitter.emit("burned", { from, amount: amount.toNumber(), srcChainId, timestamp: ts.toNumber() });
+    contract.on("TokensMinted", async (to, amount, dstChainId, ts) => {
+      const event = { type:'minted', to, amount: amount.toNumber(), dstChainId, timestamp: ts.toNumber() };
+      console.log(`🌐 [OmniChain] Minted ${amount} → ${to} on chain ${dstChainId}`);
+      emitter.emit("minted", event);
+      try {
+        await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(event)
+        });
+      } catch (e) {
+        console.error("Failed to forward minted event", e);
+      }
     });
 
-    console.log("✅ OmniChainTokenomics plugin initialized");
+    contract.on("TokensBurned", async (from, amount, srcChainId, ts) => {
+      const event = { type:'burned', from, amount: amount.toNumber(), srcChainId, timestamp: ts.toNumber() };
+      console.log(`🔥 [OmniChain] Burned ${amount} ← ${from} on chain ${srcChainId}`);
+      emitter.emit("burned", event);
+      try {
+        await fetch(apiUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(event)
+        });
+      } catch (e) {
+        console.error("Failed to forward burned event", e);
+      }
+    });
+
+    console.log("✅ OmniChain plugin initialized (forwarding events)");
   }
 };
