@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Add near the bottom, before program.parse(...)
 program
   .command('set-threshold <amt>')

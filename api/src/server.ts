@@ -1,16 +1,25 @@
-import dotenv from 'dotenv';
+import * as path from 'path';
+import { config as loadEnv } from 'dotenv';
 import express, { Request, Response } from 'express';
 import http from 'http';
 import { ApolloServer } from 'apollo-server-express';
-import { typeDefs, resolvers } from './graphql';
+import { useServer } from 'graphql-ws/lib/use/ws';
+import { WebSocketServer } from 'ws';
+import thresholdRouter from './services/threshold';
+import { schema } from './graphql';
 
-dotenv.config();
+// 1️⃣ Load .env from repo root
+loadEnv({ path: path.resolve(__dirname, '../../.env') });
 
+// 2️⃣ Set up Express + HTTP server
 const app = express();
 const server = http.createServer(app);
-app.use(express.json());
-  app.use('/api', require('./services/threshold').router);
 
+app.use(express.json());
+// Mount your existing threshold REST endpoints
+app.use('/api', thresholdRouter);
+
+// 3️⃣ Server-Sent Events (SSE) for arbitrary event forwarding
 let clients: Response[] = [];
 app.get('/events', (req, res) => {
   res.set({
@@ -25,22 +34,44 @@ app.get('/events', (req, res) => {
   });
 });
 
+// Expose a POST hook to broadcast to all SSE clients
 app.post('/api/events', (req, res) => {
   const event = req.body;
-  clients.forEach(c => c.write(`data: ${JSON.stringify(event)}\n\n`));
+  clients.forEach(c =>
+    c.write(`data: ${JSON.stringify(event)}\n\n`)
+  );
   res.sendStatus(200);
 });
 
-async function start() {
-  const apollo = new ApolloServer({ typeDefs, resolvers });
+// 4️⃣ GraphQL & WebSocket Subscriptions
+async function startApollo() {
+  const apollo = new ApolloServer({ schema });
   await apollo.start();
   apollo.applyMiddleware({ app, path: '/graphql' });
 
-  const port = process.env.PORT || 4000;
-  server.listen(port, () => {
-    console.log(`API listening on http://localhost:${port}${apollo.graphqlPath}`);
-    console.log(`SSE endpoint at http://localhost:${port}/events`);
+  // WebSocket for subscriptions
+  const wsServer = new WebSocketServer({
+    server,
+    path: '/graphql',
   });
+  useServer(
+    {
+      schema,
+      execute: (...args) => (schema.execute ? schema.execute(...args) : null),
+      subscribe: (...args) => (schema.subscribe ? schema.subscribe(...args) : null),
+    },
+    wsServer
+  );
 }
 
-start();
+startApollo().catch(err => {
+  console.error('❌ Apollo failed to start', err);
+  process.exit(1);
+});
+
+// 5️⃣ Boot
+const PORT = parseInt(process.env.PORT || '4000', 10);
+server.listen(PORT, () => {
+  console.log(`🚀 HTTP + SSE + GraphQL running at http://localhost:${PORT}`);
+  console.log(`📶 Subscriptions ws://localhost:${PORT}/graphql`);
+});
